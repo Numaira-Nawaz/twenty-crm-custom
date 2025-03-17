@@ -15,6 +15,7 @@ import { MigrateRichTextContentPatchCommand } from 'src/database/commands/upgrad
 import { MigrateSearchVectorOnNoteAndTaskEntitiesCommand } from 'src/database/commands/upgrade-version-command/0-43/0-43-migrate-search-vector-on-note-and-task-entities.command';
 import { UpdateDefaultViewRecordOpeningOnWorkflowObjectsCommand } from 'src/database/commands/upgrade-version-command/0-43/0-43-update-default-view-record-opening-on-workflow-objects.command';
 import { InitializePermissionsCommand } from 'src/database/commands/upgrade-version-command/0-44/0-44-initialize-permissions.command';
+import { UpdateViewAggregateOperationsCommand } from 'src/database/commands/upgrade-version-command/0-44/0-44-update-view-aggregate-operations.command';
 import { MigrateRelationsToFieldMetadataCommand } from 'src/database/commands/upgrade-version-command/0-50/0-50-migrate-relations-to-field-metadata.command';
 import { EnvironmentService } from 'src/engine/core-modules/environment/environment.service';
 import { Workspace } from 'src/engine/core-modules/workspace/workspace.entity';
@@ -49,6 +50,7 @@ export class UpgradeCommand extends UpgradeCommandRunner {
 
     // 0.44 Commands
     protected readonly initializePermissionsCommand: InitializePermissionsCommand,
+    protected readonly updateViewAggregateOperationsCommand: UpdateViewAggregateOperationsCommand,
 
     // 0.50 Commands
     protected readonly migrateRelationsToFieldMetadataCommand: MigrateRelationsToFieldMetadataCommand,
@@ -73,7 +75,10 @@ export class UpgradeCommand extends UpgradeCommandRunner {
       ],
     };
     const commands_044: VersionCommands = {
-      beforeSyncMetadata: [this.initializePermissionsCommand],
+      beforeSyncMetadata: [
+        this.initializePermissionsCommand,
+        this.updateViewAggregateOperationsCommand,
+      ],
       afterSyncMetadata: [],
     };
     const _commands_050: VersionCommands = {
