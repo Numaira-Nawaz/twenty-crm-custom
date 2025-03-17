@@ -5,12 +5,11 @@ import { RESET_CONTEXT_TO_SELECTION } from '@/command-menu/constants/ResetContex
 import { useMatchingCommandMenuCommands } from '@/command-menu/hooks/useMatchingCommandMenuCommands';
 import { commandMenuSearchState } from '@/command-menu/states/commandMenuSearchState';
 import { Command } from '@/command-menu/types/Command';
-import { contextStoreCurrentObjectMetadataIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataIdComponentState';
-import { objectMetadataItemsState } from '@/object-metadata/states/objectMetadataItemsState';
+import { useContextStoreObjectMetadataItemOrThrow } from '@/context-store/hooks/useContextStoreObjectMetadataItemOrThrow';
+import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
 import { SelectableItem } from '@/ui/layout/selectable-list/components/SelectableItem';
 import { useRecoilComponentValueV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValueV2';
 import { useLingui } from '@lingui/react/macro';
-import { isNonEmptyString } from '@sniptt/guards';
 import { useRecoilValue } from 'recoil';
 import { isDefined } from 'twenty-shared';
 
@@ -26,7 +25,6 @@ export const CommandMenu = () => {
 
   const {
     noResults,
-    copilotCommands,
     matchingStandardActionRecordSelectionCommands,
     matchingStandardActionObjectCommands,
     matchingWorkflowRunRecordSelectionCommands,
@@ -38,43 +36,16 @@ export const CommandMenu = () => {
     commandMenuSearch,
   });
 
-  const selectableItems: Command[] = copilotCommands
-    .concat(
-      matchingStandardActionRecordSelectionCommands,
-      matchingStandardActionObjectCommands,
-      matchingWorkflowRunRecordSelectionCommands,
-      matchingStandardActionGlobalCommands,
-      matchingWorkflowRunGlobalCommands,
-      matchingNavigateCommands,
-      fallbackCommands,
-    )
-    .filter(isDefined);
+  const previousContextStoreCurrentObjectMetadataItemId =
+    useRecoilComponentValueV2(
+      contextStoreCurrentObjectMetadataItemIdComponentState,
+      'command-menu-previous',
+    );
 
-  const previousContextStoreCurrentObjectMetadataId = useRecoilComponentValueV2(
-    contextStoreCurrentObjectMetadataIdComponentState,
-    'command-menu-previous',
-  );
-
-  const objectMetadataItems = useRecoilValue(objectMetadataItemsState);
-  const currentObjectMetadataId = useRecoilComponentValueV2(
-    contextStoreCurrentObjectMetadataIdComponentState,
-  );
-
-  const currentObjectMetadataItem = objectMetadataItems.find(
-    (objectMetadataItem) => objectMetadataItem.id === currentObjectMetadataId,
-  );
-
-  const selectableItemIds = selectableItems.map((item) => item.id);
-
-  if (isNonEmptyString(previousContextStoreCurrentObjectMetadataId)) {
-    selectableItemIds.unshift(RESET_CONTEXT_TO_SELECTION);
-  }
+  const { objectMetadataItem: currentObjectMetadataItem } =
+    useContextStoreObjectMetadataItemOrThrow();
 
   const commandGroups: CommandGroupConfig[] = [
-    {
-      heading: t`Copilot`,
-      items: copilotCommands,
-    },
     {
       heading: t`Record Selection`,
       items: matchingStandardActionRecordSelectionCommands.concat(
@@ -97,13 +68,23 @@ export const CommandMenu = () => {
     },
   ];
 
+  const selectableItems: Command[] = commandGroups.flatMap(
+    (group) => group.items ?? [],
+  );
+
+  const selectableItemIds = selectableItems.map((item) => item.id);
+
+  if (isDefined(previousContextStoreCurrentObjectMetadataItemId)) {
+    selectableItemIds.unshift(RESET_CONTEXT_TO_SELECTION);
+  }
+
   return (
     <CommandMenuList
       commandGroups={commandGroups}
       selectableItemIds={selectableItemIds}
       noResults={noResults}
     >
-      {isNonEmptyString(previousContextStoreCurrentObjectMetadataId) && (
+      {isDefined(previousContextStoreCurrentObjectMetadataItemId) && (
         <CommandGroup heading={t`Context`}>
           <SelectableItem itemId={RESET_CONTEXT_TO_SELECTION}>
             <ResetContextToSelectionCommandButton />

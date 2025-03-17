@@ -6,13 +6,16 @@ import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { turnSortsIntoOrderBy } from '@/object-record/object-sort-dropdown/utils/turnSortsIntoOrderBy';
 import { useSetRecordIdsForColumn } from '@/object-record/record-board/hooks/useSetRecordIdsForColumn';
 import { useFilterValueDependencies } from '@/object-record/record-filter/hooks/useFilterValueDependencies';
-import { computeViewRecordGqlOperationFilter } from '@/object-record/record-filter/utils/computeViewRecordGqlOperationFilter';
+import { currentRecordFiltersComponentState } from '@/object-record/record-filter/states/currentRecordFiltersComponentState';
+import { computeRecordGqlOperationFilter } from '@/object-record/record-filter/utils/computeViewRecordGqlOperationFilter';
 import { recordGroupDefinitionFamilyState } from '@/object-record/record-group/states/recordGroupDefinitionFamilyState';
 import { useRecordBoardRecordGqlFields } from '@/object-record/record-index/hooks/useRecordBoardRecordGqlFields';
-import { recordIndexFiltersState } from '@/object-record/record-index/states/recordIndexFiltersState';
-import { recordIndexSortsState } from '@/object-record/record-index/states/recordIndexSortsState';
+import { useSetRecordIndexEntityCount } from '@/object-record/record-index/hooks/useSetRecordIndexEntityCount';
 import { recordIndexViewFilterGroupsState } from '@/object-record/record-index/states/recordIndexViewFilterGroupsState';
+import { currentRecordSortsComponentState } from '@/object-record/record-sort/states/currentRecordSortsComponentState';
 import { useUpsertRecordsInStore } from '@/object-record/record-store/hooks/useUpsertRecordsInStore';
+import { useRecoilComponentValueV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValueV2';
+import { mapViewFilterGroupsToRecordFilterGroups } from '@/views/utils/mapViewFilterGroupsToRecordFilterGroups';
 import { isDefined } from 'twenty-shared';
 
 type UseLoadRecordIndexBoardProps = {
@@ -41,18 +44,29 @@ export const useLoadRecordIndexBoardColumn = ({
   const recordIndexViewFilterGroups = useRecoilValue(
     recordIndexViewFilterGroupsState,
   );
-  const recordIndexFilters = useRecoilValue(recordIndexFiltersState);
-  const recordIndexSorts = useRecoilValue(recordIndexSortsState);
+
+  const recordFilterGroups = mapViewFilterGroupsToRecordFilterGroups(
+    recordIndexViewFilterGroups,
+  );
+
+  const currentRecordFilters = useRecoilComponentValueV2(
+    currentRecordFiltersComponentState,
+  );
+
+  const currentRecordSorts = useRecoilComponentValueV2(
+    currentRecordSortsComponentState,
+  );
 
   const { filterValueDependencies } = useFilterValueDependencies();
 
-  const requestFilters = computeViewRecordGqlOperationFilter(
+  const requestFilters = computeRecordGqlOperationFilter({
     filterValueDependencies,
-    recordIndexFilters,
-    objectMetadataItem?.fields ?? [],
-    recordIndexViewFilterGroups,
-  );
-  const orderBy = turnSortsIntoOrderBy(objectMetadataItem, recordIndexSorts);
+    recordFilters: currentRecordFilters,
+    recordFilterGroups,
+    fields: objectMetadataItem.fields,
+  });
+
+  const orderBy = turnSortsIntoOrderBy(objectMetadataItem, currentRecordSorts);
 
   const recordGqlFields = useRecordBoardRecordGqlFields({
     objectMetadataItem,
@@ -78,6 +92,7 @@ export const useLoadRecordIndexBoardColumn = ({
     fetchMoreRecords,
     queryStateIdentifier,
     hasNextPage,
+    totalCount,
   } = useFindManyRecords({
     objectNameSingular,
     filter,
@@ -85,6 +100,13 @@ export const useLoadRecordIndexBoardColumn = ({
     recordGqlFields,
     limit: 10,
   });
+
+  const { setRecordIndexEntityCount } =
+    useSetRecordIndexEntityCount(recordBoardId);
+
+  useEffect(() => {
+    setRecordIndexEntityCount(totalCount ?? 0, columnId);
+  }, [setRecordIndexEntityCount, totalCount, columnId]);
 
   useEffect(() => {
     setRecordIdsForColumn(columnId, records);

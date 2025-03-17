@@ -1,12 +1,12 @@
 import {
   Controller,
-  Delete,
   Get,
-  Patch,
+  Delete,
   Post,
-  Put,
   Req,
   Res,
+  Patch,
+  Put,
 } from '@nestjs/common';
 
 import { Request, Response } from 'express';
@@ -36,11 +36,9 @@ export class RestApiMetadataController {
 
   @Post()
   async handleApiPost(@Req() request: Request, @Res() res: Response) {
-    console.log("request: ",request);
-    
     const result = await this.restApiMetadataService.create(request);
 
-    res.status(201).send(cleanGraphQLResponse(result));
+    res.status(201).send(cleanGraphQLResponse(result.data.data));
   }
 
   @Patch()

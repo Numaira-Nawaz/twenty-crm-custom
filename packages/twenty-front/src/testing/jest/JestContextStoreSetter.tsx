@@ -1,6 +1,7 @@
 import { PropsWithChildren, useEffect, useState } from 'react';
 
-import { contextStoreCurrentObjectMetadataIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataIdComponentState';
+import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
+import { contextStoreCurrentViewIdComponentState } from '@/context-store/states/contextStoreCurrentViewIdComponentState';
 import { contextStoreFiltersComponentState } from '@/context-store/states/contextStoreFiltersComponentState';
 import { contextStoreNumberOfSelectedRecordsComponentState } from '@/context-store/states/contextStoreNumberOfSelectedRecordsComponentState';
 import {
@@ -16,17 +17,19 @@ export type JestContextStoreSetterMocks = {
   contextStoreNumberOfSelectedRecords?: number;
   contextStoreFilters?: RecordFilter[];
   contextStoreCurrentObjectMetadataNameSingular?: string;
+  contextStoreCurrentViewId?: string;
 };
 
 type JestContextStoreSetterProps =
   PropsWithChildren<JestContextStoreSetterMocks>;
 export const JestContextStoreSetter = ({
+  contextStoreCurrentViewId,
   contextStoreTargetedRecordsRule = {
     mode: 'selection',
     selectedRecordIds: [],
   },
   contextStoreNumberOfSelectedRecords = 0,
-  contextStoreCurrentObjectMetadataNameSingular = '',
+  contextStoreCurrentObjectMetadataNameSingular = 'company',
   contextStoreFilters = [],
   children,
 }: JestContextStoreSetterProps) => {
@@ -34,9 +37,10 @@ export const JestContextStoreSetter = ({
     contextStoreTargetedRecordsRuleComponentState,
   );
 
-  const setContextStoreCurrentObjectMetadataId = useSetRecoilComponentStateV2(
-    contextStoreCurrentObjectMetadataIdComponentState,
-  );
+  const setContextStoreCurrentObjectMetadataItemId =
+    useSetRecoilComponentStateV2(
+      contextStoreCurrentObjectMetadataItemIdComponentState,
+    );
 
   const setContextStoreNumberOfSelectedRecords = useSetRecoilComponentStateV2(
     contextStoreNumberOfSelectedRecordsComponentState,
@@ -44,6 +48,10 @@ export const JestContextStoreSetter = ({
 
   const setcontextStoreFiltersComponentState = useSetRecoilComponentStateV2(
     contextStoreFiltersComponentState,
+  );
+
+  const setContextStoreCurrentViewId = useSetRecoilComponentStateV2(
+    contextStoreCurrentViewIdComponentState,
   );
 
   const { objectMetadataItem } = useObjectMetadataItem({
@@ -54,21 +62,25 @@ export const JestContextStoreSetter = ({
 
   const [isLoaded, setIsLoaded] = useState(false);
   useEffect(() => {
+    setContextStoreCurrentViewId(contextStoreCurrentViewId);
     setContextStoreTargetedRecordsRule(contextStoreTargetedRecordsRule);
-    setContextStoreCurrentObjectMetadataId(contextStoreCurrentObjectMetadataId);
+    setContextStoreCurrentObjectMetadataItemId(objectMetadataItem.id);
     setContextStoreNumberOfSelectedRecords(contextStoreNumberOfSelectedRecords);
     setcontextStoreFiltersComponentState(contextStoreFilters);
 
     setIsLoaded(true);
   }, [
     setContextStoreTargetedRecordsRule,
-    setContextStoreCurrentObjectMetadataId,
+    setContextStoreCurrentObjectMetadataItemId,
     contextStoreTargetedRecordsRule,
     contextStoreCurrentObjectMetadataId,
     setContextStoreNumberOfSelectedRecords,
     contextStoreNumberOfSelectedRecords,
     setcontextStoreFiltersComponentState,
     contextStoreFilters,
+    objectMetadataItem,
+    setContextStoreCurrentViewId,
+    contextStoreCurrentViewId,
   ]);
 
   return isLoaded ? <>{children}</> : null;

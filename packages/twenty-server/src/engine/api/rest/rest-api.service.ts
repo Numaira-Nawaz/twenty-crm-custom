@@ -37,7 +37,7 @@ export class RestApiService {
       response = await this.httpService.axiosRef.post(url, data, {
         headers: {
           'Content-Type': 'application/json',
-          // Authorization: request.headers.authorization,
+          Authorization: request.headers.authorization,
         },
       });
     } catch (err) {

@@ -1,8 +1,19 @@
 import { Injectable } from '@nestjs/common';
 
-import { PermissionsOnAllObjectRecords, SettingsFeatures } from 'twenty-shared';
+import { isDefined, PermissionsOnAllObjectRecords } from 'twenty-shared';
 
+import {
+  AuthException,
+  AuthExceptionCode,
+} from 'src/engine/core-modules/auth/auth.exception';
 import { EnvironmentService } from 'src/engine/core-modules/environment/environment.service';
+import { SettingsPermissions } from 'src/engine/metadata-modules/permissions/constants/settings-permissions.constants';
+import {
+  PermissionsException,
+  PermissionsExceptionCode,
+  PermissionsExceptionMessage,
+} from 'src/engine/metadata-modules/permissions/permissions.exception';
+import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role.service';
 
 @Injectable()
@@ -19,7 +30,7 @@ export class PermissionsService {
     userWorkspaceId: string;
     workspaceId: string;
   }): Promise<{
-    settingsPermissions: Record<SettingsFeatures, boolean>;
+    settingsPermissions: Record<SettingsPermissions, boolean>;
     objectRecordsPermissions: Record<PermissionsOnAllObjectRecords, boolean>;
   }> {
     const [roleOfUserWorkspace] = await this.userRoleService
@@ -35,12 +46,12 @@ export class PermissionsService {
       hasPermissionOnSettingFeature = true;
     }
 
-    const settingsPermissionsMap = Object.keys(SettingsFeatures).reduce(
+    const settingsPermissionsMap = Object.keys(SettingsPermissions).reduce(
       (acc, feature) => ({
         ...acc,
         [feature]: hasPermissionOnSettingFeature,
       }),
-      {} as Record<SettingsFeatures, boolean>,
+      {} as Record<SettingsPermissions, boolean>,
     );
 
     const objectRecordsPermissionsMap: Record<
@@ -67,11 +78,24 @@ export class PermissionsService {
     userWorkspaceId,
     workspaceId,
     _setting,
+    isExecutedByApiKey,
   }: {
-    userWorkspaceId: string;
+    userWorkspaceId?: string;
     workspaceId: string;
-    _setting: SettingsFeatures;
+    _setting: SettingsPermissions;
+    isExecutedByApiKey: boolean;
   }): Promise<boolean> {
+    if (isExecutedByApiKey) {
+      return true;
+    }
+
+    if (!isDefined(userWorkspaceId)) {
+      throw new AuthException(
+        'Missing userWorkspaceId or apiKey in authContext',
+        AuthExceptionCode.USER_WORKSPACE_NOT_FOUND,
+      );
+    }
+
     const [roleOfUserWorkspace] = await this.userRoleService
       .getRolesByUserWorkspaces({
         userWorkspaceIds: [userWorkspaceId],
@@ -86,7 +110,58 @@ export class PermissionsService {
     return false;
   }
 
-  public async isPermissionsEnabled(): Promise<boolean> {
-    return this.environmentService.get('PERMISSIONS_ENABLED') === true;
+  public async userHasObjectRecordsPermission({
+    userWorkspaceId,
+    workspaceId,
+    requiredPermission,
+    isExecutedByApiKey,
+  }: {
+    userWorkspaceId?: string;
+    workspaceId: string;
+    requiredPermission: PermissionsOnAllObjectRecords;
+    isExecutedByApiKey: boolean;
+  }): Promise<boolean> {
+    if (isExecutedByApiKey) {
+      return true;
+    }
+
+    if (!isDefined(userWorkspaceId)) {
+      throw new AuthException(
+        'Missing userWorkspaceId or apiKey in authContext',
+        AuthExceptionCode.USER_WORKSPACE_NOT_FOUND,
+      );
+    }
+
+    const [roleOfUserWorkspace] = await this.userRoleService
+      .getRolesByUserWorkspaces({
+        userWorkspaceIds: [userWorkspaceId],
+        workspaceId,
+      })
+      .then((roles) => roles?.get(userWorkspaceId) ?? []);
+
+    const roleColumn =
+      this.getRoleColumnForRequiredPermission(requiredPermission);
+
+    return roleOfUserWorkspace?.[roleColumn] === true;
+  }
+
+  private getRoleColumnForRequiredPermission(
+    requiredPermission: PermissionsOnAllObjectRecords,
+  ): keyof RoleEntity {
+    switch (requiredPermission) {
+      case PermissionsOnAllObjectRecords.READ_ALL_OBJECT_RECORDS:
+        return 'canReadAllObjectRecords';
+      case PermissionsOnAllObjectRecords.UPDATE_ALL_OBJECT_RECORDS:
+        return 'canUpdateAllObjectRecords';
+      case PermissionsOnAllObjectRecords.SOFT_DELETE_ALL_OBJECT_RECORDS:
+        return 'canSoftDeleteAllObjectRecords';
+      case PermissionsOnAllObjectRecords.DESTROY_ALL_OBJECT_RECORDS:
+        return 'canDestroyAllObjectRecords';
+      default:
+        throw new PermissionsException(
+          PermissionsExceptionMessage.UNKNOWN_REQUIRED_PERMISSION,
+          PermissionsExceptionCode.UNKNOWN_REQUIRED_PERMISSION,
+        );
+    }
   }
 }

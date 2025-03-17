@@ -1,4 +1,4 @@
-import { useContextStoreCurrentObjectMetadataIdOrThrow } from '@/context-store/hooks/useContextStoreCurrentObjectMetadataIdOrThrow';
+import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
 import { contextStoreFiltersComponentState } from '@/context-store/states/contextStoreFiltersComponentState';
 import { contextStoreTargetedRecordsRuleComponentState } from '@/context-store/states/contextStoreTargetedRecordsRuleComponentState';
 import { computeContextStoreFilters } from '@/context-store/utils/computeContextStoreFilters';
@@ -14,11 +14,13 @@ export const useFindManyRecordsSelectedInContextStore = ({
   instanceId?: string;
   limit?: number;
 }) => {
-  const objectMetadataId =
-    useContextStoreCurrentObjectMetadataIdOrThrow(instanceId);
+  const contextStoreCurrentObjectMetadataItemId = useRecoilComponentValueV2(
+    contextStoreCurrentObjectMetadataItemIdComponentState,
+    instanceId,
+  );
 
   const { objectMetadataItem } = useObjectMetadataItemById({
-    objectId: objectMetadataId,
+    objectId: contextStoreCurrentObjectMetadataItemId ?? '',
   });
 
   const contextStoreTargetedRecordsRule = useRecoilComponentValueV2(
@@ -36,12 +38,13 @@ export const useFindManyRecordsSelectedInContextStore = ({
   const queryFilter = computeContextStoreFilters(
     contextStoreTargetedRecordsRule,
     contextStoreFilters,
-    objectMetadataItem,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    objectMetadataItem!,
     filterValueDependencies,
   );
 
   const { records, loading, totalCount } = useFindManyRecords({
-    objectNameSingular: objectMetadataItem.nameSingular,
+    objectNameSingular: objectMetadataItem?.nameSingular ?? '',
     filter: queryFilter,
     withSoftDeleted: true,
     orderBy: [

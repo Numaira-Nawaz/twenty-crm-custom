@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import crypto from 'node:crypto';
 
+import { i18n } from '@lingui/core';
+import { t } from '@lingui/core/macro';
 import { render } from '@react-email/render';
 import { addMilliseconds } from 'date-fns';
 import ms from 'ms';
@@ -36,7 +38,7 @@ import {
 } from 'src/engine/core-modules/auth/dto/user-exists.entity';
 import { WorkspaceInviteHashValid } from 'src/engine/core-modules/auth/dto/workspace-invite-hash-valid.entity';
 import { SignInUpService } from 'src/engine/core-modules/auth/services/sign-in-up.service';
-import { SocialSsoService } from 'src/engine/core-modules/auth/services/social-sso.service';
+import { AuthSsoService } from 'src/engine/core-modules/auth/services/auth-sso.service';
 import { AccessTokenService } from 'src/engine/core-modules/auth/token/services/access-token.service';
 import { RefreshTokenService } from 'src/engine/core-modules/auth/token/services/refresh-token.service';
 import {
@@ -67,7 +69,7 @@ export class AuthService {
     private readonly refreshTokenService: RefreshTokenService,
     private readonly userWorkspaceService: UserWorkspaceService,
     private readonly workspaceInvitationService: WorkspaceInvitationService,
-    private readonly socialSsoService: SocialSsoService,
+    private readonly authSsoService: AuthSsoService,
     private readonly userService: UserService,
     private readonly signInUpService: SignInUpService,
     @InjectRepository(Workspace, 'core')
@@ -238,7 +240,7 @@ export class AuthService {
     const user = await this.userRepository.findOne({
       where: { email },
     });
-      console.log("1");
+
     userValidator.assertIsDefinedOrThrow(
       user,
       new AuthException('User not found', AuthExceptionCode.USER_NOT_FOUND),
@@ -251,8 +253,6 @@ export class AuthService {
       user.id,
       workspaceId,
     );
-    console.log("2");
-    
     const refreshToken = await this.refreshTokenService.generateRefreshToken(
       user.id,
       workspaceId,
@@ -426,12 +426,14 @@ export class AuthService {
     const html = render(emailTemplate, { pretty: true });
     const text = render(emailTemplate, { plainText: true });
 
+    i18n.activate(locale);
+
     this.emailService.send({
       from: `${this.environmentService.get(
         'EMAIL_FROM_NAME',
       )} <${this.environmentService.get('EMAIL_FROM_ADDRESS')}>`,
       to: user.email,
-      subject: 'Your Password Has Been Successfully Changed',
+      subject: t`Your Password Has Been Successfully Changed`,
       text,
       html,
     });
@@ -520,15 +522,18 @@ export class AuthService {
   ) {
     if (params.workspaceInviteHash) {
       return (
-        (await this.workspaceRepository.findOneBy({
-          inviteHash: params.workspaceInviteHash,
+        (await this.workspaceRepository.findOne({
+          where: {
+            inviteHash: params.workspaceInviteHash,
+          },
+          relations: ['approvedAccessDomains'],
         })) ?? undefined
       );
     }
 
     if (params.authProvider !== 'password') {
       return (
-        (await this.socialSsoService.findWorkspaceFromWorkspaceIdOrAuthProvider(
+        (await this.authSsoService.findWorkspaceFromWorkspaceIdOrAuthProvider(
           {
             email: params.email,
             authProvider: params.authProvider,
@@ -569,6 +574,20 @@ export class AuthService {
     const isInvitedToWorkspace = hasPersonalInvitation || hasPublicInviteLink;
     const isTargetAnExistingWorkspace = !!workspace;
     const isAnExistingUser = userData.type === 'existingUser';
+
+    const email =
+      userData.type === 'newUser'
+        ? userData.newUserPayload.email
+        : userData.existingUser.email;
+
+    if (
+      workspace?.approvedAccessDomains.some(
+        (trustDomain) =>
+          trustDomain.isValidated && trustDomain.domain === email.split('@')[1],
+      )
+    ) {
+      return;
+    }
 
     if (
       hasPublicInviteLink &&

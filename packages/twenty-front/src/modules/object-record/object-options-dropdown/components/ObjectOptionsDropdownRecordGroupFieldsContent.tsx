@@ -24,6 +24,7 @@ import { DropdownMenuSeparator } from '@/ui/layout/dropdown/components/DropdownM
 import { navigationMemorizedUrlState } from '@/ui/navigation/states/navigationMemorizedUrlState';
 import { useRecoilComponentValueV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValueV2';
 import { ViewType } from '@/views/types/ViewType';
+import { useLingui } from '@lingui/react/macro';
 import { useLocation } from 'react-router-dom';
 import { useSetRecoilState } from 'recoil';
 import { isDefined } from 'twenty-shared';
@@ -31,12 +32,12 @@ import { FieldMetadataType } from '~/generated-metadata/graphql';
 import { getSettingsPath } from '~/utils/navigation/getSettingsPath';
 
 export const ObjectOptionsDropdownRecordGroupFieldsContent = () => {
+  const { t } = useLingui();
   const { getIcon } = useIcons();
 
   const {
     viewType,
     currentContentId,
-    recordIndexId,
     objectMetadataItem,
     onContentChange,
     resetContent,
@@ -64,9 +65,7 @@ export const ObjectOptionsDropdownRecordGroupFieldsContent = () => {
   const {
     handleRecordGroupFieldChange: setRecordGroupField,
     resetRecordGroupField,
-  } = useHandleRecordGroupField({
-    viewBarComponentId: recordIndexId,
-  });
+  } = useHandleRecordGroupField();
 
   const newSelectFieldSettingsUrl = getSettingsPath(
     SettingsPath.ObjectNewFieldConfigure,
@@ -119,13 +118,13 @@ export const ObjectOptionsDropdownRecordGroupFieldsContent = () => {
       <StyledInput
         autoFocus
         value={recordGroupFieldSearchInput}
-        placeholder="Search fields"
+        placeholder={t`Search fields`}
         onChange={(event) => setRecordGroupFieldSearchInput(event.target.value)}
       />
       <DropdownMenuItemsContainer>
         {viewType === ViewType.Table && (
           <MenuItemSelect
-            text="None"
+            text={t`None`}
             selected={!isDefined(recordGroupFieldMetadata)}
             onClick={handleResetRecordGroupField}
           />
@@ -141,7 +140,7 @@ export const ObjectOptionsDropdownRecordGroupFieldsContent = () => {
         ))}
       </DropdownMenuItemsContainer>
       <DropdownMenuSeparator />
-      <DropdownMenuItemsContainer>
+      <DropdownMenuItemsContainer scrollable={false}>
         <UndecoratedLink
           to={newSelectFieldSettingsUrl}
           onClick={() => {
@@ -149,7 +148,7 @@ export const ObjectOptionsDropdownRecordGroupFieldsContent = () => {
             closeDropdown();
           }}
         >
-          <MenuItem LeftIcon={IconSettings} text="Create select field" />
+          <MenuItem LeftIcon={IconSettings} text={t`Create select field`} />
         </UndecoratedLink>
       </DropdownMenuItemsContainer>
     </>

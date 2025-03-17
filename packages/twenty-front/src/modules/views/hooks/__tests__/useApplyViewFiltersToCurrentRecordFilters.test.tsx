@@ -7,7 +7,7 @@ import { useRecoilComponentValueV2 } from '@/ui/utilities/state/component-state/
 import { ViewFilter } from '@/views/types/ViewFilter';
 import { ViewFilterOperand } from '@/views/types/ViewFilterOperand';
 import { isDefined } from 'twenty-shared';
-import { getJestMetadataAndApolloMocksAndActionMenuWrapper } from '~/testing/jest/getJestMetadataAndApolloMocksAndContextStoreWrapper';
+import { getJestMetadataAndApolloMocksAndActionMenuWrapper } from '~/testing/jest/getJestMetadataAndApolloMocksAndActionMenuWrapper';
 import { generatedMockObjectMetadataItems } from '~/testing/mock-data/generatedMockObjectMetadataItems';
 import { useApplyViewFiltersToCurrentRecordFilters } from '../useApplyViewFiltersToCurrentRecordFilters';
 
@@ -70,8 +70,8 @@ describe('useApplyViewFiltersToCurrentRecordFilters', () => {
         value: mockViewFilter.value,
         displayValue: mockViewFilter.displayValue,
         operand: mockViewFilter.operand,
-        viewFilterGroupId: mockViewFilter.viewFilterGroupId,
-        positionInViewFilterGroup: mockViewFilter.positionInViewFilterGroup,
+        recordFilterGroupId: mockViewFilter.viewFilterGroupId,
+        positionInRecordFilterGroup: mockViewFilter.positionInViewFilterGroup,
         label: mockFieldMetadataItem.label,
         type: getFilterTypeFromFieldType(mockFieldMetadataItem.type),
       } satisfies RecordFilter,

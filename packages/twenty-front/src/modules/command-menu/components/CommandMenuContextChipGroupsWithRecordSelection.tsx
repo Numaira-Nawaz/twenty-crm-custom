@@ -1,8 +1,10 @@
 import { CommandMenuContextChipGroups } from '@/command-menu/components/CommandMenuContextChipGroups';
 import { CommandMenuContextRecordChipAvatars } from '@/command-menu/components/CommandMenuContextRecordChipAvatars';
+import { useCommandMenu } from '@/command-menu/hooks/useCommandMenu';
 import { getSelectedRecordsContextText } from '@/command-menu/utils/getRecordContextText';
 import { useFindManyRecordsSelectedInContextStore } from '@/context-store/hooks/useFindManyRecordsSelectedInContextStore';
 import { useObjectMetadataItemById } from '@/object-metadata/hooks/useObjectMetadataItemById';
+import { isDefined } from 'twenty-shared';
 import { CommandMenuContextChipProps } from './CommandMenuContextChip';
 
 export const CommandMenuContextChipGroupsWithRecordSelection = ({
@@ -21,7 +23,9 @@ export const CommandMenuContextChipGroupsWithRecordSelection = ({
       limit: 3,
     });
 
-  if (loading || !totalCount) {
+  const { openRootCommandMenu } = useCommandMenu();
+
+  if (loading) {
     return null;
   }
 
@@ -33,21 +37,28 @@ export const CommandMenuContextChipGroupsWithRecordSelection = ({
     />
   ));
 
-  const selectedRecordsContextText = getSelectedRecordsContextText(
-    objectMetadataItem,
-    records,
-    totalCount,
-  );
+  const recordSelectionContextChip =
+    totalCount && records.length > 0
+      ? {
+          text: getSelectedRecordsContextText(
+            objectMetadataItem,
+            records,
+            totalCount,
+          ),
+          Icons: Avatars,
+          onClick: contextChips.length > 0 ? openRootCommandMenu : undefined,
+          withIconBackground: false,
+        }
+      : undefined;
+
+  const contextChipsWithRecordSelection = [
+    recordSelectionContextChip,
+    ...contextChips,
+  ].filter(isDefined);
 
   return (
     <CommandMenuContextChipGroups
-      contextChips={[
-        {
-          text: selectedRecordsContextText,
-          Icons: Avatars,
-        },
-        ...contextChips,
-      ]}
+      contextChips={contextChipsWithRecordSelection}
     />
   );
 };

@@ -1,11 +1,11 @@
 import {
   Column,
   CreateDateColumn,
-  DataSourceOptions,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  DataSourceOptions,
+  OneToMany,
 } from 'typeorm';
 
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';

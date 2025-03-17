@@ -21,6 +21,19 @@ export class RoleService {
     });
   }
 
+  public async getRoleById(
+    id: string,
+    workspaceId: string,
+  ): Promise<RoleEntity | null> {
+    return this.roleRepository.findOne({
+      where: {
+        id,
+        workspaceId,
+      },
+      relations: ['userWorkspaceRoles'],
+    });
+  }
+
   public async createAdminRole({
     workspaceId,
   }: {
@@ -29,6 +42,7 @@ export class RoleService {
     return this.roleRepository.save({
       label: ADMIN_ROLE_LABEL,
       description: 'Admin role',
+      icon: 'IconUserCog',
       canUpdateAllSettings: true,
       canReadAllObjectRecords: true,
       canUpdateAllObjectRecords: true,
@@ -47,11 +61,32 @@ export class RoleService {
     return this.roleRepository.save({
       label: MEMBER_ROLE_LABEL,
       description: 'Member role',
+      icon: 'IconUser',
       canUpdateAllSettings: false,
       canReadAllObjectRecords: true,
       canUpdateAllObjectRecords: true,
       canSoftDeleteAllObjectRecords: true,
       canDestroyAllObjectRecords: true,
+      isEditable: false,
+      workspaceId,
+    });
+  }
+
+  // Only used for dev seeding and testing
+  public async createGuestRole({
+    workspaceId,
+  }: {
+    workspaceId: string;
+  }): Promise<RoleEntity> {
+    return this.roleRepository.save({
+      label: 'Guest',
+      description: 'Guest role',
+      icon: 'IconUser',
+      canUpdateAllSettings: false,
+      canReadAllObjectRecords: true,
+      canUpdateAllObjectRecords: false,
+      canSoftDeleteAllObjectRecords: false,
+      canDestroyAllObjectRecords: false,
       isEditable: false,
       workspaceId,
     });

@@ -17,11 +17,7 @@ export class CaptchaGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    console.log('canActivate ------------------------------');
-    console.log("context: " + context.getArgs);
-    
     const ctx = GqlExecutionContext.create(context);
-console.log("ctx: ",ctx);
 
     const { captchaToken: token } = ctx.getArgs();
 
@@ -30,7 +26,7 @@ console.log("ctx: ",ctx);
     if (result.success) {
       return true;
     } else {
-      await this.healthCacheService.incrementInvalidCaptchaCounter();
+      await this.healthCacheService.updateInvalidCaptchaCache(token);
 
       throw new BadRequestException(
         'Invalid Captcha, please try another device',

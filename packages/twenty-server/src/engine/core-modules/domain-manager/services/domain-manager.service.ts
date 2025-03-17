@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isDefined } from 'twenty-shared';
 import { Repository } from 'typeorm';
 
+import { SEED_APPLE_WORKSPACE_ID } from 'src/database/typeorm-seeds/core/workspaces';
 import { WorkspaceSubdomainCustomDomainAndIsCustomDomainEnabledType } from 'src/engine/core-modules/domain-manager/domain-manager.type';
 import { CustomDomainValidRecords } from 'src/engine/core-modules/domain-manager/dtos/custom-domain-valid-records';
 import { generateRandomSubdomain } from 'src/engine/core-modules/domain-manager/utils/generate-random-subdomain';
@@ -11,6 +12,7 @@ import { getSubdomainFromEmail } from 'src/engine/core-modules/domain-manager/ut
 import { getSubdomainNameFromDisplayName } from 'src/engine/core-modules/domain-manager/utils/get-subdomain-name-from-display-name';
 import { EnvironmentService } from 'src/engine/core-modules/environment/environment.service';
 import { Workspace } from 'src/engine/core-modules/workspace/workspace.entity';
+import { workspaceValidator } from 'src/engine/core-modules/workspace/workspace.validate';
 
 @Injectable()
 export class DomainManagerService {
@@ -128,42 +130,35 @@ export class DomainManagerService {
   }
 
   private async getDefaultWorkspace() {
-    if (!this.environmentService.get('IS_MULTIWORKSPACE_ENABLED')) {
-      const defaultWorkspaceSubDomain =
-        this.environmentService.get('DEFAULT_SUBDOMAIN');
-
-      if (isDefined(defaultWorkspaceSubDomain)) {
-        const foundWorkspaceForDefaultSubDomain =
-          await this.workspaceRepository.findOne({
-            where: { subdomain: defaultWorkspaceSubDomain },
-            relations: ['workspaceSSOIdentityProviders'],
-          });
-
-        if (isDefined(foundWorkspaceForDefaultSubDomain)) {
-          return foundWorkspaceForDefaultSubDomain;
-        }
-      }
-
-      const workspaces = await this.workspaceRepository.find({
-        order: {
-          createdAt: 'DESC',
-        },
-        relations: ['workspaceSSOIdentityProviders'],
-      });
-        console.log('In getDefaultWorkspace: ', workspaces);
-        
-      if (workspaces.length > 1) {
-        Logger.warn(
-          `In single-workspace mode, there should be only one workspace. Today there are ${workspaces.length} workspaces`,
-        );
-      }
-
-      return workspaces[0];
+    if (this.environmentService.get('IS_MULTIWORKSPACE_ENABLED')) {
+      throw new Error(
+        'Default workspace does not exist when multi-workspace is enabled',
+      );
     }
 
-    throw new Error(
-      'Default workspace not exist when multi-workspace is enabled',
-    );
+    const workspaces = await this.workspaceRepository.find({
+      order: {
+        createdAt: 'DESC',
+      },
+      relations: ['workspaceSSOIdentityProviders'],
+    });
+
+    if (workspaces.length > 1) {
+      Logger.warn(
+        ` ${workspaces.length} workspaces found in database. In single-workspace mode, there should be only one workspace. Apple seed workspace will be used as fallback if it found.`,
+      );
+    }
+
+    const foundWorkspace =
+      workspaces.length === 1
+        ? workspaces[0]
+        : workspaces.filter(
+            (workspace) => workspace.id === SEED_APPLE_WORKSPACE_ID,
+          )?.[0];
+
+    workspaceValidator.assertIsDefinedOrThrow(foundWorkspace);
+
+    return foundWorkspace;
   }
 
   async getWorkspaceByOriginOrDefaultWorkspace(origin: string) {

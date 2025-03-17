@@ -8,15 +8,12 @@ import { useRecordTableContextOrThrow } from '@/object-record/record-table/conte
 import { RecordTableEmptyStateDisplay } from '@/object-record/record-table/empty-state/components/RecordTableEmptyStateDisplay';
 import { tableFiltersComponentState } from '@/object-record/record-table/states/tableFiltersComponentState';
 import { useRecoilComponentValueV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValueV2';
-import { useDeleteCombinedViewFilters } from '@/views/hooks/useDeleteCombinedViewFilters';
+
 import { isDefined } from 'twenty-shared';
 
 export const RecordTableEmptyStateSoftDelete = () => {
   const { objectMetadataItem, objectNameSingular, recordTableId } =
     useRecordTableContextOrThrow();
-
-  const { deleteCombinedViewFilter } =
-    useDeleteCombinedViewFilters(recordTableId);
 
   const tableFilters = useRecoilComponentValueV2(
     tableFiltersComponentState,
@@ -39,8 +36,7 @@ export const RecordTableEmptyStateSoftDelete = () => {
       throw new Error('Deleted filter not found');
     }
 
-    removeRecordFilter(deletedFilter.fieldMetadataId);
-    deleteCombinedViewFilter(deletedFilter.id);
+    removeRecordFilter({ recordFilterId: deletedFilter.id });
 
     toggleSoftDeleteFilterState(false);
   };

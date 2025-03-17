@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { addMilliseconds } from 'date-fns';
 import { Request } from 'express';
 import ms from 'ms';
-import { ExtractJwt } from 'passport-jwt';
 import { isWorkspaceActiveOrSuspended } from 'twenty-shared';
 import { Repository } from 'typeorm';
 
@@ -54,40 +53,32 @@ export class AccessTokenService {
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
-console.log("1");
 
     userValidator.assertIsDefinedOrThrow(
       user,
       new AuthException('User is not found', AuthExceptionCode.INVALID_INPUT),
     );
-console.log("2");
 
     let tokenWorkspaceMemberId: string | undefined;
 
     const workspace = await this.workspaceRepository.findOne({
       where: { id: workspaceId },
     });
-console.log("3");
 
     workspaceValidator.assertIsDefinedOrThrow(workspace);
-console.log("4");
 
     if (isWorkspaceActiveOrSuspended(workspace)) {
-      console.log("5");
-      
       const workspaceMemberRepository =
         await this.twentyORMGlobalManager.getRepositoryForWorkspace<WorkspaceMemberWorkspaceEntity>(
           workspaceId,
           'workspaceMember',
         );
-console.log("6");
 
       const workspaceMember = await workspaceMemberRepository.findOne({
         where: {
           userId: user.id,
         },
       });
-console.log("7");
 
       if (!workspaceMember) {
         throw new AuthException(
@@ -95,7 +86,6 @@ console.log("7");
           AuthExceptionCode.FORBIDDEN_EXCEPTION,
         );
       }
-console.log("8");
 
       tokenWorkspaceMemberId = workspaceMember.id;
     }
@@ -134,9 +124,7 @@ console.log("8");
   }
 
   async validateTokenByRequest(request: Request): Promise<AuthContext> {
-    // console.log("req:",request);
-    
-    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
+    const token = this.jwtWrapperService.extractJwtFromRequest()(request);
 
     if (!token) {
       throw new AuthException(

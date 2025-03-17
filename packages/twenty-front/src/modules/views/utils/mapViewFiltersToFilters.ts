@@ -18,9 +18,8 @@ export const mapViewFiltersToFilters = (
       );
 
       if (!isDefined(availableFieldMetadataItem)) {
-        throw new Error(
-          `Field metadata item not found for view filter ${viewFilter.id} and field metadata id ${viewFilter.fieldMetadataId}`,
-        );
+        // Todo: we we don't throw an error yet as we have race condition on view change
+        return undefined;
       }
 
       const filterType = getFilterTypeFromFieldType(
@@ -33,11 +32,11 @@ export const mapViewFiltersToFilters = (
         value: viewFilter.value,
         displayValue: viewFilter.displayValue,
         operand: viewFilter.operand,
-        viewFilterGroupId: viewFilter.viewFilterGroupId,
-        positionInViewFilterGroup: viewFilter.positionInViewFilterGroup,
+        recordFilterGroupId: viewFilter.viewFilterGroupId,
+        positionInRecordFilterGroup: viewFilter.positionInViewFilterGroup,
         label: availableFieldMetadataItem.label,
         type: filterType,
-      };
+      } satisfies RecordFilter;
     })
     .filter(isDefined);
 };

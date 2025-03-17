@@ -29,16 +29,14 @@ export class RestApiMetadataService {
   }
 
   async create(request: Request) {
-    console.log("create", request);
-    
-    // await this.accessTokenService.validateTokenByRequest(request);
-  //   const data = await this.metadataQueryBuilderFactory.create(request);
+    await this.accessTokenService.validateTokenByRequest(request);
+    const data = await this.metadataQueryBuilderFactory.create(request);
 
-  //   return await this.restApiService.call(
-  //     GraphqlApiType.METADATA,
-  //     request,
-  //     data,
-  //   );
+    return await this.restApiService.call(
+      GraphqlApiType.METADATA,
+      request,
+      data,
+    );
   }
 
   async update(request: Request) {

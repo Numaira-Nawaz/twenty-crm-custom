@@ -62,12 +62,11 @@ export class DataSourceService {
 
   async getLastDataSourceMetadataFromWorkspaceIdOrFail(
     workspaceId: string,
-  ){
+  ): Promise<DataSourceEntity> {
     try {
-      console.log("workspace by findOne function: ")
       return this.dataSourceMetadataRepository.findOneOrFail({
         where: { workspaceId },
-        // order: { createdAt: 'DESC' },
+        order: { createdAt: 'DESC' },
       });
     } catch (error) {
       throw new DataSourceException(

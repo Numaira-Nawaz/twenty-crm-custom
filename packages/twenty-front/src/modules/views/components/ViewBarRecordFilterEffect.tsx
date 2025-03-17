@@ -1,38 +1,32 @@
-import { contextStoreCurrentObjectMetadataIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataIdComponentState';
+import { COMMAND_MENU_COMPONENT_INSTANCE_ID } from '@/command-menu/constants/CommandMenuComponentInstanceId';
+import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
 import { contextStoreCurrentViewIdComponentState } from '@/context-store/states/contextStoreCurrentViewIdComponentState';
-import { objectMetadataItemsState } from '@/object-metadata/states/objectMetadataItemsState';
 import { useFilterableFieldMetadataItems } from '@/object-record/record-filter/hooks/useFilterableFieldMetadataItems';
 import { currentRecordFiltersComponentState } from '@/object-record/record-filter/states/currentRecordFiltersComponentState';
-import { usePrefetchedData } from '@/prefetch/hooks/usePrefetchedData';
-import { PrefetchKey } from '@/prefetch/types/PrefetchKey';
+import { prefetchViewFromViewIdFamilySelector } from '@/prefetch/states/selector/prefetchViewFromViewIdFamilySelector';
 import { useRecoilComponentFamilyStateV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentFamilyStateV2';
 import { useRecoilComponentValueV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValueV2';
 import { useSetRecoilComponentStateV2 } from '@/ui/utilities/state/component-state/hooks/useSetRecoilComponentStateV2';
 import { hasInitializedCurrentRecordFiltersComponentFamilyState } from '@/views/states/hasInitializedCurrentRecordFiltersComponentFamilyState';
-import { View } from '@/views/types/View';
 import { mapViewFiltersToFilters } from '@/views/utils/mapViewFiltersToFilters';
 import { useEffect } from 'react';
 import { useRecoilValue } from 'recoil';
 import { isDefined } from 'twenty-shared';
 
 export const ViewBarRecordFilterEffect = () => {
-  const { records: views, isDataPrefetched } = usePrefetchedData<View>(
-    PrefetchKey.AllViews,
-  );
-
   const currentViewId = useRecoilComponentValueV2(
     contextStoreCurrentViewIdComponentState,
   );
 
-  const contextStoreCurrentObjectMetadataId = useRecoilComponentValueV2(
-    contextStoreCurrentObjectMetadataIdComponentState,
+  const contextStoreCurrentObjectMetadataItemId = useRecoilComponentValueV2(
+    contextStoreCurrentObjectMetadataItemIdComponentState,
+    COMMAND_MENU_COMPONENT_INSTANCE_ID,
   );
 
-  const objectMetadataItems = useRecoilValue(objectMetadataItemsState);
-
-  const objectMetadataItem = objectMetadataItems.find(
-    (objectMetadataItem) =>
-      objectMetadataItem.id === contextStoreCurrentObjectMetadataId,
+  const currentView = useRecoilValue(
+    prefetchViewFromViewIdFamilySelector({
+      viewId: currentViewId ?? '',
+    }),
   );
 
   const [
@@ -49,19 +43,15 @@ export const ViewBarRecordFilterEffect = () => {
     currentRecordFiltersComponentState,
   );
 
-  const currentRecordFilters = useRecoilComponentValueV2(
-    currentRecordFiltersComponentState,
-  );
-
   const { filterableFieldMetadataItems } = useFilterableFieldMetadataItems(
-    objectMetadataItem?.id,
+    contextStoreCurrentObjectMetadataItemId ?? '',
   );
 
   useEffect(() => {
-    if (isDataPrefetched && !hasInitializedCurrentRecordFilters) {
-      const currentView = views.find((view) => view.id === currentViewId);
-
-      if (currentView?.objectMetadataId !== objectMetadataItem?.id) {
+    if (isDefined(currentView) && !hasInitializedCurrentRecordFilters) {
+      if (
+        currentView.objectMetadataId !== contextStoreCurrentObjectMetadataItemId
+      ) {
         return;
       }
 
@@ -72,19 +62,18 @@ export const ViewBarRecordFilterEffect = () => {
             filterableFieldMetadataItems,
           ),
         );
+
         setHasInitializedCurrentRecordFilters(true);
       }
     }
   }, [
-    isDataPrefetched,
-    views,
     currentViewId,
     setCurrentRecordFilters,
     filterableFieldMetadataItems,
-    currentRecordFilters,
     hasInitializedCurrentRecordFilters,
     setHasInitializedCurrentRecordFilters,
-    objectMetadataItem?.id,
+    currentView,
+    contextStoreCurrentObjectMetadataItemId,
   ]);
 
   return null;

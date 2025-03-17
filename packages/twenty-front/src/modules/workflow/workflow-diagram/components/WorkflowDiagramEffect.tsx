@@ -1,4 +1,6 @@
 import { getSnapshotValue } from '@/ui/utilities/state/utils/getSnapshotValue';
+import { useStepsOutputSchema } from '@/workflow/hooks/useStepsOutputSchema';
+import { flowState } from '@/workflow/states/flowState';
 import { workflowLastCreatedStepIdState } from '@/workflow/states/workflowLastCreatedStepIdState';
 import {
   WorkflowVersion,
@@ -20,6 +22,8 @@ export const WorkflowDiagramEffect = ({
   workflowWithCurrentVersion: WorkflowWithCurrentVersion | undefined;
 }) => {
   const setWorkflowDiagram = useSetRecoilState(workflowDiagramState);
+  const setFlow = useSetRecoilState(flowState);
+  const { populateStepsOutputSchema } = useStepsOutputSchema();
 
   const computeAndMergeNewWorkflowDiagram = useRecoilCallback(
     ({ snapshot, set }) => {
@@ -64,20 +68,36 @@ export const WorkflowDiagramEffect = ({
     [],
   );
 
+  const currentVersion = workflowWithCurrentVersion?.currentVersion;
   useEffect(() => {
-    const currentVersion = workflowWithCurrentVersion?.currentVersion;
     if (!isDefined(currentVersion)) {
+      setFlow(undefined);
       setWorkflowDiagram(undefined);
 
       return;
     }
 
+    setFlow({
+      workflowVersionId: currentVersion.id,
+      trigger: currentVersion.trigger,
+      steps: currentVersion.steps,
+    });
+
     computeAndMergeNewWorkflowDiagram(currentVersion);
   }, [
     computeAndMergeNewWorkflowDiagram,
+    setFlow,
     setWorkflowDiagram,
-    workflowWithCurrentVersion?.currentVersion,
+    currentVersion,
   ]);
+
+  useEffect(() => {
+    if (!isDefined(currentVersion)) {
+      return;
+    }
+
+    populateStepsOutputSchema(currentVersion);
+  }, [currentVersion, populateStepsOutputSchema]);
 
   return null;
 };

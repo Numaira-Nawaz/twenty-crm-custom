@@ -28,7 +28,7 @@ export class WorkspaceEntityManager extends EntityManager {
     // find already created repository instance and return it if found
 
     const repoFromMap = this.repositories.get(target);
-    console.log("found repository")
+
     if (repoFromMap) {
       return repoFromMap as WorkspaceRepository<Entity>;
     }

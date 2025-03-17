@@ -31,6 +31,7 @@ import {
 } from 'src/engine/core-modules/auth/types/signInUp.type';
 import { DomainManagerService } from 'src/engine/core-modules/domain-manager/services/domain-manager.service';
 import { EnvironmentService } from 'src/engine/core-modules/environment/environment.service';
+import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { FileUploadService } from 'src/engine/core-modules/file/file-upload/services/file-upload.service';
 import { OnboardingService } from 'src/engine/core-modules/onboarding/onboarding.service';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
@@ -38,6 +39,7 @@ import { UserService } from 'src/engine/core-modules/user/services/user.service'
 import { User } from 'src/engine/core-modules/user/user.entity';
 import { WorkspaceInvitationService } from 'src/engine/core-modules/workspace-invitation/services/workspace-invitation.service';
 import { Workspace } from 'src/engine/core-modules/workspace/workspace.entity';
+import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role.service';
 import { getDomainNameByEmail } from 'src/utils/get-domain-name-by-email';
 import { getImageBufferFromUrl } from 'src/utils/image';
 import { isWorkEmail } from 'src/utils/is-work-email';
@@ -58,6 +60,8 @@ export class SignInUpService {
     private readonly environmentService: EnvironmentService,
     private readonly domainManagerService: DomainManagerService,
     private readonly userService: UserService,
+    private readonly userRoleService: UserRoleService,
+    private readonly featureFlagService: FeatureFlagService,
   ) {}
 
   async computeParamsForNewUser(
@@ -105,8 +109,6 @@ export class SignInUpService {
 
       return { user: updatedUser, workspace: params.workspace };
     }
-
-    console.log('Signing up...', params);
 
     if (params.userData.type === 'newUserWithPicture') {
       return await this.signUpOnNewWorkspace(
@@ -209,6 +211,7 @@ export class SignInUpService {
     const userToCreate = this.userRepository.create({
       ...newUser,
       defaultAvatarUrl: imagePath,
+      canAccessFullAdminPanel: false,
       canImpersonate: false,
     } as Partial<User>);
 
@@ -257,15 +260,24 @@ export class SignInUpService {
           )
         : params.userData.existingUser;
 
-    const updatedUser = await this.userWorkspaceService.addUserToWorkspace(
-      currentUser,
-      params.workspace,
-    );
+    const { user: updatedUser, userWorkspace } =
+      await this.userWorkspaceService.addUserToWorkspace(
+        currentUser,
+        params.workspace,
+      );
 
     const user = Object.assign(currentUser, updatedUser);
 
     if (params.userData.type === 'newUserWithPicture') {
       await this.activateOnboardingForUser(user, params.workspace);
+    }
+
+    if (params.workspace.defaultRoleId) {
+      await this.userRoleService.assignRoleToUserWorkspace({
+        workspaceId: params.workspace.id,
+        userWorkspaceId: userWorkspace.id,
+        roleId: params.workspace.defaultRoleId,
+      });
     }
 
     return user;
@@ -291,6 +303,7 @@ export class SignInUpService {
     const user: PartialUserWithPicture = {
       ...partialUserWithPicture,
       canImpersonate: false,
+      canAccessFullAdminPanel: false,
     };
 
     if (!user.email) {
@@ -305,15 +318,15 @@ export class SignInUpService {
 
       // if the workspace doesn't exist it means it's the first user of the workspace
       user.canImpersonate = true;
-      console.log('workspacesCount: ' + workspacesCount);
+      user.canAccessFullAdminPanel = true;
 
       // let the creation of the first workspace
-      // if (workspacesCount > 0) {
-      //   throw new AuthException(
-      //     'New workspace setup is disabled',
-      //     AuthExceptionCode.SIGNUP_DISABLED,
-      //   );
-      // }
+      if (workspacesCount > 0) {
+        throw new AuthException(
+          'New workspace setup is disabled',
+          AuthExceptionCode.SIGNUP_DISABLED,
+        );
+      }
     }
 
     const logoUrl = `${TWENTY_ICONS_BASE_URL}/${getDomainNameByEmail(user.email)}`;
@@ -333,9 +346,9 @@ export class SignInUpService {
 
     const workspaceToCreate = this.workspaceRepository.create({
       subdomain: await this.domainManagerService.generateSubdomain(),
-      displayName: 'brackets',
+      displayName: '',
       inviteHash: v4(),
-      activationStatus: WorkspaceActivationStatus.ACTIVE,
+      activationStatus: WorkspaceActivationStatus.PENDING_CREATION,
       logo,
     });
 
@@ -358,7 +371,6 @@ export class SignInUpService {
       workspaceId: workspace.id,
       value: true,
     });
-        console.log("user: ",user," workspace: ",workspace);
 
     return { user: newUser, workspace };
   }

@@ -3,7 +3,7 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import omit from 'lodash.omit';
-import { SettingsFeatures, SOURCE_LOCALE } from 'twenty-shared';
+import { SOURCE_LOCALE } from 'twenty-shared';
 import { Repository } from 'typeorm';
 
 import { ApiKeyTokenInput } from 'src/engine/core-modules/auth/dto/api-key-token.input';
@@ -24,7 +24,6 @@ import {
   AuthException,
   AuthExceptionCode,
 } from 'src/engine/core-modules/auth/auth.exception';
-import { AvailableWorkspaceOutput } from 'src/engine/core-modules/auth/dto/available-workspaces.output';
 import { GetAuthorizationUrlForSSOInput } from 'src/engine/core-modules/auth/dto/get-authorization-url-for-sso.input';
 import { GetAuthorizationUrlForSSOOutput } from 'src/engine/core-modules/auth/dto/get-authorization-url-for-sso.output';
 import { GetLoginTokenFromEmailVerificationTokenInput } from 'src/engine/core-modules/auth/dto/get-login-token-from-email-verification-token.input';
@@ -50,6 +49,7 @@ import { OriginHeader } from 'src/engine/decorators/auth/origin-header.decorator
 import { SettingsPermissionsGuard } from 'src/engine/guards/settings-permissions.guard';
 import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { SettingsPermissions } from 'src/engine/metadata-modules/permissions/constants/settings-permissions.constants';
 import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/permissions/utils/permissions-graphql-api-exception.filter';
 
 import { GetAuthTokensFromLoginTokenInput } from './dto/get-auth-tokens-from-login-token.input';
@@ -131,8 +131,7 @@ export class AuthResolver {
       await this.domainManagerService.getWorkspaceByOriginOrDefaultWorkspace(
         origin,
       );
-      console.log("origin: " + origin);
-      
+
     workspaceValidator.assertIsDefinedOrThrow(
       workspace,
       new AuthException(
@@ -242,6 +241,7 @@ export class AuthResolver {
       user.id,
       user.email,
       workspace,
+      signUpInput.locale ?? SOURCE_LOCALE,
     );
 
     const loginToken = await this.loginTokenService.generateLoginToken(
@@ -300,14 +300,13 @@ export class AuthResolver {
       await this.domainManagerService.getWorkspaceByOriginOrDefaultWorkspace(
         origin,
       );
-        console.log('getAuthTokensFromLoginToken', getAuthTokensFromLoginTokenInput);
+
     workspaceValidator.assertIsDefinedOrThrow(workspace);
 
     const { sub: email, workspaceId } =
       await this.loginTokenService.verifyLoginToken(
         getAuthTokensFromLoginTokenInput.loginToken,
       );
-console.log("email,workspace");
 
     if (workspaceId !== workspace.id) {
       throw new AuthException(
@@ -344,7 +343,7 @@ console.log("email,workspace");
 
   @UseGuards(
     WorkspaceAuthGuard,
-    SettingsPermissionsGuard(SettingsFeatures.API_KEYS_AND_WEBHOOKS),
+    SettingsPermissionsGuard(SettingsPermissions.API_KEYS_AND_WEBHOOKS),
   )
   @Mutation(() => ApiKeyToken)
   async generateApiKeyToken(
@@ -366,6 +365,7 @@ console.log("email,workspace");
     const resetToken =
       await this.resetPasswordService.generatePasswordResetToken(
         emailPasswordResetInput.email,
+        emailPasswordResetInput.workspaceId,
       );
 
     return await this.resetPasswordService.sendEmailPasswordResetLink(
@@ -402,12 +402,5 @@ console.log("email,workspace");
     return this.resetPasswordService.validatePasswordResetToken(
       args.passwordResetToken,
     );
-  }
-
-  @Query(() => [AvailableWorkspaceOutput])
-  async findAvailableWorkspacesByEmail(
-    @Args('email') email: string,
-  ): Promise<AvailableWorkspaceOutput[]> {
-    return this.userWorkspaceService.findAvailableWorkspacesByEmail(email);
   }
 }

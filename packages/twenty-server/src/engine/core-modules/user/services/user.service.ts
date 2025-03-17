@@ -12,12 +12,21 @@ import {
   AuthException,
   AuthExceptionCode,
 } from 'src/engine/core-modules/auth/auth.exception';
+import { FeatureFlagKey } from 'src/engine/core-modules/feature-flag/enums/feature-flag-key.enum';
+import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
+import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
 import { User } from 'src/engine/core-modules/user/user.entity';
 import { userValidator } from 'src/engine/core-modules/user/user.validate';
 import { WorkspaceService } from 'src/engine/core-modules/workspace/services/workspace.service';
 import { Workspace } from 'src/engine/core-modules/workspace/workspace.entity';
 import { DataSourceService } from 'src/engine/metadata-modules/data-source/data-source.service';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
+import {
+  PermissionsException,
+  PermissionsExceptionCode,
+  PermissionsExceptionMessage,
+} from 'src/engine/metadata-modules/permissions/permissions.exception';
+import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role.service';
 import { TwentyORMGlobalManager } from 'src/engine/twenty-orm/twenty-orm-global.manager';
 import { WorkspaceEventEmitter } from 'src/engine/workspace-event-emitter/workspace-event-emitter';
 import { WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
@@ -34,6 +43,9 @@ export class UserService extends TypeOrmQueryService<User> {
     private readonly workspaceEventEmitter: WorkspaceEventEmitter,
     private readonly workspaceService: WorkspaceService,
     private readonly twentyORMGlobalManager: TwentyORMGlobalManager,
+    private readonly userRoleService: UserRoleService,
+    private readonly userWorkspaceService: UserWorkspaceService,
+    private readonly featureFlagService: FeatureFlagService,
   ) {
     super(userRepository);
   }
@@ -81,14 +93,32 @@ export class UserService extends TypeOrmQueryService<User> {
       await this.dataSourceService.getLastDataSourceMetadataFromWorkspaceIdOrFail(
         workspaceId,
       );
-    console.log('datasourceee');
+
     const workspaceDataSource =
       await this.typeORMService.connectToDataSource(dataSourceMetadata);
-    console.log('workkspacedatasource');
+
+    const isPermissionsEnabled = await this.featureFlagService.isFeatureEnabled(
+      FeatureFlagKey.IsPermissionsEnabled,
+      workspaceId,
+    );
 
     const workspaceMembers = await workspaceDataSource?.query(
       `SELECT * FROM ${dataSourceMetadata.schema}."workspaceMember"`,
     );
+
+    if (isPermissionsEnabled && workspaceMembers.length > 1) {
+      const userWorkspace =
+        await this.userWorkspaceService.getUserWorkspaceForUserOrThrow({
+          userId,
+          workspaceId,
+        });
+
+      await this.userRoleService.validateUserWorkspaceIsNotUniqueAdminOrThrow({
+        workspaceId,
+        userWorkspaceId: userWorkspace.id,
+      });
+    }
+
     const workspaceMember = workspaceMembers.filter(
       (member: WorkspaceMemberWorkspaceEntity) => member.userId === userId,
     )?.[0];
@@ -135,11 +165,29 @@ export class UserService extends TypeOrmQueryService<User> {
       },
       relations: ['workspaces'],
     });
-    console.log('user to be deleted', user);
+
     userValidator.assertIsDefinedOrThrow(user);
 
     await Promise.all(
-      user.workspaces.map(this.deleteUserFromWorkspace.bind(this)),
+      user.workspaces.map(async (userWorkspace) => {
+        try {
+          await this.deleteUserFromWorkspace({
+            userId,
+            workspaceId: userWorkspace.workspaceId,
+          });
+        } catch (error: any) {
+          if (
+            error instanceof PermissionsException &&
+            error.code === PermissionsExceptionCode.CANNOT_UNASSIGN_LAST_ADMIN
+          ) {
+            throw new PermissionsException(
+              PermissionsExceptionMessage.CANNOT_DELETE_LAST_ADMIN_USER,
+              PermissionsExceptionCode.CANNOT_DELETE_LAST_ADMIN_USER,
+            );
+          }
+          throw error;
+        }
+      }),
     );
 
     return user;

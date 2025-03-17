@@ -22,16 +22,26 @@ export const sortFavorites = (
     objectNameSingular: string,
   ) => ObjectRecordIdentifier,
   hasLinkToShowPage: boolean,
-  views: View[],
+  views: Pick<View, 'id' | 'name' | 'objectMetadataId' | 'icon'>[],
   objectMetadataItems: ObjectMetadataItem[],
 ) => {
   return favorites
     .map((favorite) => {
-      if (isDefined(favorite.viewId) && isDefined(favorite.workspaceMemberId)) {
-        const { labelPlural, view } = getObjectMetadataLabelPluralFromViewId(
-          views,
+      if (
+        isDefined(favorite.viewId) &&
+        isDefined(favorite.forWorkspaceMemberId)
+      ) {
+        const view = views.find((view) => view.id === favorite.viewId);
+
+        if (!isDefined(view)) {
+          return {
+            ...favorite,
+          } as ProcessedFavorite;
+        }
+
+        const { labelPlural } = getObjectMetadataLabelPluralFromViewId(
+          view,
           objectMetadataItems,
-          favorite.viewId,
         );
 
         return {
@@ -47,7 +57,7 @@ export const sortFavorites = (
             { objectNamePlural: labelPlural.toLowerCase() },
             favorite.viewId ? { viewId: favorite.viewId } : undefined,
           ),
-          workspaceMemberId: favorite.workspaceMemberId,
+          forWorkspaceMemberId: favorite.forWorkspaceMemberId,
           favoriteFolderId: favorite.favoriteFolderId,
           objectNameSingular: 'view',
           Icon: view?.icon,
@@ -79,7 +89,7 @@ export const sortFavorites = (
             link: hasLinkToShowPage
               ? objectRecordIdentifier.linkToShowPage
               : '',
-            workspaceMemberId: favorite.workspaceMemberId,
+            forWorkspaceMemberId: favorite.forWorkspaceMemberId,
             favoriteFolderId: favorite.favoriteFolderId,
             objectNameSingular: objectNameSingular,
           } as ProcessedFavorite;

@@ -1,7 +1,9 @@
+import { CurrentUserWorkspace } from '@/auth/states/currentUserWorkspaceState';
 import { WorkspaceMember } from '@/workspace-member/types/WorkspaceMember';
 import {
   FeatureFlagKey,
   OnboardingStatus,
+  SettingsPermissions,
   SubscriptionInterval,
   SubscriptionStatus,
   User,
@@ -17,6 +19,7 @@ type MockedUser = Pick<
   | 'email'
   | 'firstName'
   | 'lastName'
+  | 'canAccessFullAdminPanel'
   | 'canImpersonate'
   | '__typename'
   | 'supportUserHash'
@@ -29,6 +32,7 @@ type MockedUser = Pick<
   currentWorkspace: Workspace;
   workspaces: Array<{ workspace: Workspace }>;
   workspaceMembers: WorkspaceMember[];
+  currentUserWorkspace: CurrentUserWorkspace;
 };
 
 export const avatarUrl =
@@ -120,11 +124,15 @@ export const mockedUserData: MockedUser = {
   email: 'charles@test.com',
   firstName: 'Charles',
   lastName: 'Test',
+  canAccessFullAdminPanel: false,
   canImpersonate: false,
   supportUserHash:
     'a95afad9ff6f0b364e2a3fd3e246a1a852c22b6e55a3ca33745a86c201f9c10d',
   workspaceMember: mockedWorkspaceMemberData,
   currentWorkspace: mockCurrentWorkspace,
+  currentUserWorkspace: {
+    settingsPermissions: [SettingsPermissions.WORKSPACE_MEMBERS],
+  },
   locale: 'en',
   workspaces: [{ workspace: mockCurrentWorkspace }],
   workspaceMembers: [mockedWorkspaceMemberData],
@@ -142,6 +150,7 @@ export const mockedOnboardingUserData = (
     email: 'workspace-onboarding@test.com',
     firstName: '',
     lastName: '',
+    canAccessFullAdminPanel: false,
     canImpersonate: false,
     supportUserHash:
       '4fb61d34ed3a4aeda2476d4b308b5162db9e1809b2b8277e6fdc6efc4a609254',
