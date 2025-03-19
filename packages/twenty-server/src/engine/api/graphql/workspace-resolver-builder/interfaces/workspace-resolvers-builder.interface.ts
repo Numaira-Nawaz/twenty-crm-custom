@@ -46,6 +46,7 @@ export interface FindDuplicatesResolverArgs<
 > {
   ids?: string[];
   data?: Data[];
+  fields?: string[];
 }
 
 export interface SearchResolverArgs<

@@ -145,6 +145,15 @@ export class QueryRunnerArgsFactory {
               ),
             ) ?? [],
           )) as string[],
+          fields: (await Promise.all(
+            (args as FindDuplicatesResolverArgs).fields?.map((field) =>
+              this.overrideValueByFieldMetadata(
+                'field',
+                field,
+                fieldMetadataMapByNameByName,
+              ),
+            ) ?? [],
+          )) as string[],
           data: await Promise.all(
             (args as FindDuplicatesResolverArgs).data?.map((arg, index) =>
               this.overrideDataByFieldMetadata(
@@ -160,6 +169,8 @@ export class QueryRunnerArgsFactory {
           ),
         } satisfies FindDuplicatesResolverArgs;
       default:
+        console.log('args: ', args);
+
         return args;
     }
   }

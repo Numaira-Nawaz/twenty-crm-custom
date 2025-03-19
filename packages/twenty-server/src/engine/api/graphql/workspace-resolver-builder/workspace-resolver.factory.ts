@@ -32,6 +32,7 @@ export class WorkspaceResolverFactory {
   private readonly logger = new Logger(WorkspaceResolverFactory.name);
 
   constructor(
+    private readonly findDuplicatesCustomResolverFactory: FindDuplicatesResolverFactory,
     private readonly findManyResolverFactory: FindManyResolverFactory,
     private readonly findOneResolverFactory: FindOneResolverFactory,
     private readonly findDuplicatesResolverFactory: FindDuplicatesResolverFactory,
@@ -58,6 +59,7 @@ export class WorkspaceResolverFactory {
       WorkspaceResolverBuilderMethodNames,
       WorkspaceResolverBuilderFactoryInterface
     >([
+      ['findDuplicates', this.findDuplicatesCustomResolverFactory],
       ['createMany', this.createManyResolverFactory],
       ['createOne', this.createOneResolverFactory],
       ['deleteMany', this.deleteManyResolverFactory],
@@ -130,6 +132,7 @@ export class WorkspaceResolverFactory {
         });
       }
     }
+    console.log('Resolvers: ', resolvers);
 
     return resolvers;
   }

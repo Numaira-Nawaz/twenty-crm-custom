@@ -18,7 +18,7 @@ export const defaultSpreadsheetImportProps: Partial<
   dateFormat: 'yyyy-mm-dd', // ISO 8601,
   parseRaw: true,
   selectHeader: false,
-  maxRecords: 2000,
+  maxRecords: 5000, // import limit
 } as const;
 
 export const SpreadsheetImport = <T extends string>(

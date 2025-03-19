@@ -47,6 +47,8 @@ export class WorkspaceGraphQLSchemaFactory {
       types: this.orphanedTypesFactory.create(),
     });
 
+    console.log('schemaa: ', schema);
+
     return schema;
   }
 }

@@ -1,5 +1,6 @@
 import { DestroyManyResolverFactory } from 'src/engine/api/graphql/workspace-resolver-builder/factories/destroy-many-resolver.factory';
 import { DestroyOneResolverFactory } from 'src/engine/api/graphql/workspace-resolver-builder/factories/destroy-one-resolver.factory';
+import { FindDuplicatesCustomFieldsResolverFactory } from 'src/engine/api/graphql/workspace-resolver-builder/factories/find-duplicates-custom-fields.factory';
 import { RestoreManyResolverFactory } from 'src/engine/api/graphql/workspace-resolver-builder/factories/restore-many-resolver.factory';
 import { RestoreOneResolverFactory } from 'src/engine/api/graphql/workspace-resolver-builder/factories/restore-one-resolver.factory';
 import { SearchResolverFactory } from 'src/engine/api/graphql/workspace-resolver-builder/factories/search-resolver-factory';
@@ -15,6 +16,7 @@ import { FindOneResolverFactory } from './find-one-resolver.factory';
 import { UpdateOneResolverFactory } from './update-one-resolver.factory';
 
 export const workspaceResolverBuilderFactories = [
+  FindDuplicatesCustomFieldsResolverFactory,
   FindManyResolverFactory,
   FindOneResolverFactory,
   FindDuplicatesResolverFactory,
@@ -33,6 +35,7 @@ export const workspaceResolverBuilderFactories = [
 
 export const workspaceResolverBuilderMethodNames = {
   queries: [
+    FindDuplicatesCustomFieldsResolverFactory.methodName,
     FindManyResolverFactory.methodName,
     FindOneResolverFactory.methodName,
     FindDuplicatesResolverFactory.methodName,
